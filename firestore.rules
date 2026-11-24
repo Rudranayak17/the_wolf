@@ -1,0 +1,111 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAdmin() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    function optionalText(value, max) {
+      return value == null || (value is string && value.size() <= max);
+    }
+
+    function requiredText(value, max) {
+      return value is string && value.size() > 0 && value.size() <= max;
+    }
+
+    function optionalNumber(value, max) {
+      return value == null || (value is number && value >= 0 && value <= max);
+    }
+
+    function validWebsiteVisitor(sessionId) {
+      let data = request.resource.data;
+      return data.keys().hasOnly([
+          'visitorId',
+          'sessionId',
+          'ipAddress',
+          'country',
+          'state',
+          'city',
+          'deviceType',
+          'deviceModel',
+          'manufacturer',
+          'operatingSystem',
+          'osVersion',
+          'browser',
+          'browserVersion',
+          'userAgent',
+          'screenResolution',
+          'devicePixelRatio',
+          'touchSupport',
+          'cpuCores',
+          'deviceMemory',
+          'timezone',
+          'language',
+          'cookiesEnabled',
+          'online',
+          'pageUrl',
+          'referrer',
+          'locationSource',
+          'visitedAt'
+        ])
+        && requiredText(data.visitorId, 80)
+        && data.sessionId == sessionId
+        && requiredText(data.sessionId, 80)
+        && optionalText(data.ipAddress, 64)
+        && optionalText(data.country, 80)
+        && optionalText(data.state, 80)
+        && optionalText(data.city, 80)
+        && data.deviceType in ['Mobile', 'Desktop', 'Tablet']
+        && optionalText(data.deviceModel, 80)
+        && optionalText(data.manufacturer, 80)
+        && requiredText(data.operatingSystem, 80)
+        && optionalText(data.osVersion, 40)
+        && requiredText(data.browser, 80)
+        && optionalText(data.browserVersion, 40)
+        && data.userAgent is string
+        && data.userAgent.size() <= 512
+        && requiredText(data.screenResolution, 40)
+        && optionalNumber(data.devicePixelRatio, 20)
+        && data.touchSupport is bool
+        && optionalNumber(data.cpuCores, 256)
+        && optionalNumber(data.deviceMemory, 1024)
+        && optionalText(data.timezone, 80)
+        && optionalText(data.language, 40)
+        && data.cookiesEnabled is bool
+        && data.online is bool
+        && requiredText(data.pageUrl, 1000)
+        && optionalText(data.referrer, 1000)
+        && data.locationSource in ['ip-lookup', 'unavailable']
+        && data.visitedAt == request.time;
+    }
+
+    match /website_visitors/{sessionId} {
+      allow create: if validWebsiteVisitor(sessionId);
+      allow read: if isAdmin();
+      allow update, delete: if false;
+    }
+
+    match /admins/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    match /visitors/{visitorId} {
+      allow create, update: if request.resource.data.page == 'home'
+        && request.resource.data.countryCode is string
+        && request.resource.data.countryName is string
+        && request.resource.data.lat is number
+        && request.resource.data.lng is number
+        && request.resource.data.lat >= -90
+        && request.resource.data.lat <= 90
+        && request.resource.data.lng >= -180
+        && request.resource.data.lng <= 180;
+      allow read: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

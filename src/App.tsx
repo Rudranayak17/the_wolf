@@ -12,6 +12,7 @@ import { OTPVerify } from './pages/auth/OTPVerify';
 import { ResetPassword } from './pages/auth/ResetPassword';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
+import { VisitorAnalytics } from './pages/admin/VisitorAnalytics';
 
 function App() {
   return (
@@ -30,6 +31,7 @@ function App() {
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/verify-otp" element={<OTPVerify />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/admin/visitors" element={<VisitorAnalytics />} />
           </Routes>
         </main>
         <Footer />
